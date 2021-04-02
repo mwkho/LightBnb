@@ -145,9 +145,6 @@ const getAllProperties = function(options, limit = 10) {
   ORDER BY cost_per_night
   LIMIT $${queryParams.length};
   `;
-
-  console.log(query, queryParams);
-
   return pool.query(query, queryParams)
     .then (res => res.rows);
 }
@@ -160,9 +157,51 @@ exports.getAllProperties = getAllProperties;
  * @return {Promise<{}>} A promise to the property.
  */
 const addProperty = function(property) {
-  const propertyId = Object.keys(properties).length + 1;
-  property.id = propertyId;
-  properties[propertyId] = property;
-  return Promise.resolve(property);
+  // validate data, throw an error when empty data
+  for (let key in property){
+    if(!property[key]){
+      return Promise().reject('One or more fields are empty');
+    }
+  }
+
+  let query = `
+  INSERT INTO properties(owner_id,title, description, thumbnail_photo_url, cover_photo_url, 
+  cost_per_night , parking_spaces, number_of_bathrooms, 
+  number_of_bedrooms, country, street, city, province,
+  post_code) VALUES `
+
+  
+
+  let paramString = '($1';
+  let length = Object.keys(property).length;
+  for (let i = 2; i <= length; i++ ){
+    paramString += `, $${i}`;
+    if (i === length){
+      paramString += ')';
+    }
+  };
+
+  let params = [
+    property.owner_id,
+    property.title,
+    property.description,
+    property.thumbnail_photo_url,
+    property.cover_photo_url,
+    Number(property.cost_per_night),
+    Number(property.parking_spaces),
+    Number(property.number_of_bathrooms),
+    Number(property.number_of_bedrooms),
+    property.country,
+    property.street,
+    property.city,
+    property.province,
+    property.post_code
+  ];
+  query += paramString;
+  query += `
+   RETURNING *`;
+
+  return pool.query(query, params).
+  then((res) => res.rows[0]);
 }
 exports.addProperty = addProperty;
